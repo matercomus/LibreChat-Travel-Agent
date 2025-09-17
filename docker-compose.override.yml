@@ -1,0 +1,21 @@
+version: '3.4'
+
+x-common-env: &common-env
+  env_file:
+    - ./custom/env-custom
+
+services:
+  api:
+    <<: *common-env
+    volumes:
+      - ./custom/librechat.custom.yaml:/app/librechat.yaml
+
+  client:
+    volumes:
+      - ./custom/nginx.custom.conf:/etc/nginx/conf.d/default.conf
+
+  meilisearch:
+    <<: *common-env
+
+  rag_api:
+    <<: *common-env
