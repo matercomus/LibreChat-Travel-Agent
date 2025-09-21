@@ -68,7 +68,7 @@ jobs:
           --instance-ids "${{ steps.get-instance.outputs.instance-id }}" \
           --document-name "AWS-RunShellScript" \
           --parameters 'commands=[
-            "cd /home/ec2-user/LibreChat-Travel-Agent",
+            "cd /LibreChat-Travel-Agent",
             "echo \"Starting LibreChat deployment...\"",
             "git fetch origin",
             "git checkout ${{ steps.branch.outputs.branch }}",
