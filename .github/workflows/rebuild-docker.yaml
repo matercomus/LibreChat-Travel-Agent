@@ -1,0 +1,115 @@
+name: Deploy LibreChat
+# This workflow deploys from your fork's v1 branch
+# 
+# Prerequisites:
+# 1. Create AWS_DEPLOYER_ROLE_ARN secret in GitHub with an IAM role that can:
+#    - Describe EC2 instances
+#    - Send SSM commands
+#    - Get SSM command results
+# 2. Ensure your EC2 instance has SSM agent installed (automatic on Amazon Linux 2023)
+# 3. Ensure your EC2 instance IAM role has AmazonSSMManagedInstanceCore policy
+on:
+  push:
+    branches: [ v1 ]  # Only deploy v1 branch (our custom changes)
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to deploy'
+        required: false
+        default: 'v1'
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AWS_DEPLOYER_ROLE_ARN }}
+        aws-region: ap-east-1
+    
+    - name: Get branch name
+      id: branch
+      run: |
+        if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+          echo "branch=${{ github.event.inputs.branch }}" >> $GITHUB_OUTPUT
+        else
+          echo "branch=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Find EC2 instance
+      id: get-instance
+      run: |
+        # Find the EC2 instance by tag
+        INSTANCE_ID=$(aws ec2 describe-instances \
+          --filters "Name=tag:Name,Values=EC2-LibreChat" "Name=instance-state-name,Values=running" \
+          --query "Reservations[0].Instances[0].InstanceId" \
+          --output text)
+        
+        if [ "$INSTANCE_ID" == "None" ] || [ -z "$INSTANCE_ID" ]; then
+          echo "Error: No running EC2 instance found with tag Name=EC2-LibreChat"
+          exit 1
+        fi
+        
+        echo "instance-id=$INSTANCE_ID" >> $GITHUB_OUTPUT
+        echo "Found EC2 instance: $INSTANCE_ID"
+    
+    - name: Deploy to EC2 via SSM
+      run: |
+        # Send deployment commands to EC2 instance
+        aws ssm send-command \
+          --instance-ids "${{ steps.get-instance.outputs.instance-id }}" \
+          --document-name "AWS-RunShellScript" \
+          --parameters 'commands=[
+            "cd /home/ec2-user/LibreChat-Travel-Agent",
+            "echo \"Starting LibreChat deployment...\"",
+            "git fetch origin",
+            "git checkout ${{ steps.branch.outputs.branch }}",
+            "git pull origin ${{ steps.branch.outputs.branch }}",
+            "docker-compose -f deploy-compose.yml -f docker-compose.override.yml pull",
+            "docker-compose -f deploy-compose.yml -f docker-compose.override.yml up -d",
+            "echo \"✅ Deployment complete!\""
+          ]' \
+          --output json > command-output.json
+        
+        # Get command ID
+        COMMAND_ID=$(jq -r '.Command.CommandId' command-output.json)
+        echo "SSM Command ID: $COMMAND_ID"
+        
+        # Wait for command to complete
+        echo "Waiting for deployment to complete..."
+        aws ssm wait command-executed \
+          --command-id "$COMMAND_ID" \
+          --instance-id "${{ steps.get-instance.outputs.instance-id }}"
+        
+        # Get command output
+        OUTPUT=$(aws ssm get-command-invocation \
+          --command-id "$COMMAND_ID" \
+          --instance-id "${{ steps.get-instance.outputs.instance-id }}" \
+          --query '[Status,StandardOutputContent,StandardErrorContent]' \
+          --output json)
+        
+        STATUS=$(echo "$OUTPUT" | jq -r '.[0]')
+        STDOUT=$(echo "$OUTPUT" | jq -r '.[1]')
+        STDERR=$(echo "$OUTPUT" | jq -r '.[2]')
+        
+        echo "Command Status: $STATUS"
+        echo "=== Standard Output ==="
+        echo "$STDOUT"
+        
+        if [ -n "$STDERR" ] && [ "$STDERR" != "null" ]; then
+          echo "=== Standard Error ==="
+          echo "$STDERR"
+        fi
+        
+        if [ "$STATUS" != "Success" ]; then
+          echo "Deployment failed!"
+          exit 1
+        fi
