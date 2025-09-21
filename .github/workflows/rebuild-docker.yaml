@@ -74,6 +74,7 @@ jobs:
             "git checkout ${{ steps.branch.outputs.branch }}",
             "git pull origin ${{ steps.branch.outputs.branch }}",
             "docker-compose -f deploy-compose.yml -f docker-compose.override.yml pull",
+            "docker-compose -f deploy-compose.yml -f docker-compose.override.yml down",
             "docker-compose -f deploy-compose.yml -f docker-compose.override.yml up -d",
             "echo \"✅ Deployment complete!\""
           ]' \
