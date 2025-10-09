@@ -134,3 +134,6 @@ helm/**/.values.yaml
 /.tabnine/
 /.codeium
 *.local.md
+
+# Ignore root-level override file - use custom/docker-compose.custom.yml instead
+docker-compose.override.yml
