@@ -85,6 +85,12 @@ services:
     restart: always
     depends_on:
       - vectordb
+  akshare_mcp:
+    image: matercomus/akshare-one-mcp:0.3.5
+    container_name: akshare-mcp
+    restart: always
+    ports:
+      - 8081:8081
 
 volumes:
   pgdata2:

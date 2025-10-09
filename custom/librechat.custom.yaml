@@ -156,6 +156,16 @@ mcpServers:
         description: "Enter your Amap API key to access location, mapping, and navigation services. You can obtain your API key from the Amap developer console."
     startup: false
     timeout: 60000
+  
+  akshare-one-mcp:
+    # Self-hosted AKShare MCP server for Chinese financial data
+    type: streamable-http
+    url: "http://akshare_mcp:8081"
+    headers:
+      Content-Type: "application/json; charset=utf-8"
+      Accept: "application/json"
+    startup: false
+    timeout: 60000
 
 # Definition of custom endpoints
 endpoints:
