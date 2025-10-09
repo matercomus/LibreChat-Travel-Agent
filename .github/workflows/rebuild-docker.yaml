@@ -73,9 +73,9 @@ jobs:
             "git fetch origin",
             "git checkout ${{ steps.branch.outputs.branch }}",
             "git pull origin ${{ steps.branch.outputs.branch }}",
-            "docker-compose -f custom/deploy-compose.custom.yml pull",
-            "docker-compose -f custom/deploy-compose.custom.yml down",
-            "docker-compose -f custom/deploy-compose.custom.yml up -d",
+            "docker-compose -f deploy-compose.custom.yml pull",
+            "docker-compose -f deploy-compose.custom.yml down",
+            "docker-compose -f deploy-compose.custom.yml up -d",
             "echo \"✅ Deployment complete!\""
           ]' \
           --output json > command-output.json

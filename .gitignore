@@ -135,5 +135,5 @@ helm/**/.values.yaml
 /.codeium
 *.local.md
 
-# Ignore root-level override file - use custom/docker-compose.custom.yml instead
+# Ignore root-level override file if present (upstream may add it)
 docker-compose.override.yml
