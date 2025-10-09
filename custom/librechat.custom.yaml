@@ -163,7 +163,7 @@ mcpServers:
     url: "http://akshare_mcp:8081/mcp"
     headers:
       Content-Type: "application/json; charset=utf-8"
-      Accept: "application/json"
+      Accept: "application/json, text/event-stream"
     startup: false
     timeout: 60000
 
